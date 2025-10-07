@@ -1,15 +1,35 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
+	"os"
+
+	"github.com/Samuel-Tarifa/chirpy/internal/database"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
 func main() {
-	mux := http.NewServeMux()
+	godotenv.Load()
+	dbURL:=os.Getenv("DB_URL")
 
 	apiCfg := apiConfig{}
+
+	db,err:=sql.Open("postgres",dbURL)
+
+	if err!=nil{
+		fmt.Printf("error opening database: %v\n",err)
+		os.Exit(1)
+	}
+
+	dbQueries:=database.New(db)
+
+	apiCfg.db=dbQueries
+
+	mux := http.NewServeMux()
+
 
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(makeFileServer(".")))
 
@@ -25,11 +45,13 @@ func main() {
 
 	mux.HandleFunc("POST /api/validate_chirp",validate_chirp)
 
+	mux.HandleFunc("POST /api/users",apiCfg.createUser)
+
 	server := http.Server{
 		Handler: mux,
 		Addr:    ":8080",
 	}
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 	if err != nil {
 		fmt.Printf("error starting the server:\n%v", err)
 	}

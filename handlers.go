@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -34,49 +33,40 @@ func validate_chirp(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&req)
 
 	if err != nil {
-		log.Printf("error decoding json:\n%v", err)
-		dat := responseError{
-			Error: "Json invalid",
-		}
-		res, err := json.Marshal(dat)
-		if err != nil {
-			log.Printf("error encoding json error response:\n%v", err)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(res)
-		w.WriteHeader(400)
+		respondWithError(w, 400, fmt.Sprintf("json invalid\n%v\n", err))
 		return
 	}
 
-	if len(req.Body)>140{
-		dat := responseError{
-			Error: "Chirp is too long",
-		}
-		res, err := json.Marshal(dat)
-		if err != nil {
-			log.Printf("error encoding json error response:\n%v", err)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(res)
-		w.WriteHeader(400)
+	if len(req.Body) > 140 {
+		respondWithError(w, 400, "chirpy is too long")
 		return
 	}
 
-	cleanBody:=cleanString(req.Body)
+	cleanBody := cleanString(req.Body)
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
 	dat := responseValid{
-		Valid: true,
-		Cleaned_body:cleanBody,
+		Valid:        true,
+		Cleaned_body: cleanBody,
 	}
-	res,err:=json.Marshal(dat)
-	if err!=nil{
-			log.Printf("error encoding json response:\n%v", err)
-			return
+	respondWithJSON(w, 200, dat)
+
+}
+
+func (cfg *apiConfig) createUser(w http.ResponseWriter, r *http.Request) {
+	type Req struct {
+		Email string `json:"email"`
 	}
-	w.Write(res)
+	req := Req{}
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		respondWithError(w, 400, fmt.Sprintf("error decoding request:\n%v", err))
+		return
+	}
+
+	u, err := cfg.db.CreateUser(r.Context(), req.Email)
+	if err != nil {
+		respondWithError(w, 500, fmt.Sprintf("error creating user:\n%v", err))
+	}
+	respondWithJSON(w, 200, u)
 
 }
