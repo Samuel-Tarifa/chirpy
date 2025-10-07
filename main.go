@@ -16,6 +16,7 @@ func main() {
 	dbURL:=os.Getenv("DB_URL")
 
 	apiCfg := apiConfig{}
+	apiCfg.platform=os.Getenv("PLATFORM")
 
 	db,err:=sql.Open("postgres",dbURL)
 

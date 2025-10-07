@@ -20,6 +20,11 @@ func (cfg *apiConfig) getHits(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *apiConfig) resetHits(w http.ResponseWriter, r *http.Request) {
+	err := cfg.db.DeleteUsers(r.Context())
+	if err != nil {
+		respondWithError(w, 500, fmt.Sprintf("error deleting users:\n%v", err))
+		return
+	}
 	cfg.fileserverHits.Store(0)
 	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(200)
