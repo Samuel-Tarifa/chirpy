@@ -148,7 +148,7 @@ func (cfg *apiConfig) getChirp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		respondWithError(w, 500, fmt.Sprint("error getting chirp:\n%v", err))
+		respondWithError(w, 500, fmt.Sprintf("error getting chirp:\n%v", err))
 		return
 	}
 	resp := Chirp{
