@@ -13,24 +13,23 @@ import (
 
 func main() {
 	godotenv.Load()
-	dbURL:=os.Getenv("DB_URL")
+	dbURL := os.Getenv("DB_URL")
 
 	apiCfg := apiConfig{}
-	apiCfg.platform=os.Getenv("PLATFORM")
+	apiCfg.platform = os.Getenv("PLATFORM")
 
-	db,err:=sql.Open("postgres",dbURL)
+	db, err := sql.Open("postgres", dbURL)
 
-	if err!=nil{
-		fmt.Printf("error opening database: %v\n",err)
+	if err != nil {
+		fmt.Printf("error opening database: %v\n", err)
 		os.Exit(1)
 	}
 
-	dbQueries:=database.New(db)
+	dbQueries := database.New(db)
 
-	apiCfg.db=dbQueries
+	apiCfg.db = dbQueries
 
 	mux := http.NewServeMux()
-
 
 	mux.Handle("/app/", apiCfg.middlewareMetricsInc(makeFileServer(".")))
 
@@ -44,9 +43,13 @@ func main() {
 
 	mux.HandleFunc("POST /admin/reset", apiCfg.resetHits)
 
-	mux.HandleFunc("POST /api/validate_chirp",validate_chirp)
+	mux.HandleFunc("POST /api/users", apiCfg.createUser)
 
-	mux.HandleFunc("POST /api/users",apiCfg.createUser)
+	mux.HandleFunc("POST /api/chirps", apiCfg.createChirp)
+
+	mux.HandleFunc("GET /api/chirps", apiCfg.getChirps)
+
+	mux.HandleFunc("GET /api/chirps/{chirpID}",apiCfg.getChirp)
 
 	server := http.Server{
 		Handler: mux,
