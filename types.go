@@ -25,7 +25,7 @@ type responseError struct {
 
 type badWordsMap map[string]bool
 
-type User struct {
+type UserResponse struct {
 	ID        uuid.UUID `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

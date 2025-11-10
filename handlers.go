@@ -3,9 +3,11 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
+	"github.com/Samuel-Tarifa/chirpy/internal/auth"
 	"github.com/Samuel-Tarifa/chirpy/internal/database"
 	"github.com/google/uuid"
 )
@@ -83,7 +85,8 @@ func (cfg *apiConfig) createChirp(w http.ResponseWriter, r *http.Request) {
 
 func (cfg *apiConfig) createUser(w http.ResponseWriter, r *http.Request) {
 	type Req struct {
-		Email string `json:"email"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 	req := Req{}
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -92,14 +95,31 @@ func (cfg *apiConfig) createUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u, err := cfg.db.CreateUser(r.Context(), req.Email)
+	if req.Email == "" || req.Password == "" {
+		respondWithError(w, 400, "need to add email and password to request")
+		return
+	}
+
+	hash, err := auth.HashPassword(req.Password)
+	if err != nil {
+		respondWithError(w, 500, "error hashing password")
+	}
+	params := database.CreateUserParams{
+		Email: req.Email,
+		HashedPassword: sql.NullString{
+			String: hash,
+			Valid:  true,
+		},
+	}
+
+	u, err := cfg.db.CreateUser(r.Context(), params)
 
 	if err != nil {
 		respondWithError(w, 500, fmt.Sprintf("error creating user:\n%v", err))
 		return
 	}
 
-	resp := User{
+	resp := UserResponse{
 		ID:        u.ID,
 		CreatedAt: u.CreatedAt.Time,
 		UpdatedAt: u.UpdatedAt.Time,
@@ -159,4 +179,54 @@ func (cfg *apiConfig) getChirp(w http.ResponseWriter, r *http.Request) {
 		User_id:   chirp.UserID,
 	}
 	respondWithJSON(w, 200, resp)
+}
+
+func (cfg *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
+	type Req struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	req := Req{}
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		respondWithError(w, 400, fmt.Sprintf("error decoding request:\n%v", err))
+		return
+	}
+
+	if req.Email == "" || req.Password == "" {
+		respondWithError(w, 400, "need to add email and password to request")
+		return
+	}
+
+	u, err := cfg.db.GetUserByEmail(r.Context(), req.Email)
+	if errors.Is(err, sql.ErrNoRows) {
+		respondWithError(w, 404, "invalid credentials")
+		return
+	}
+	if err != nil {
+		respondWithError(w, 500, fmt.Sprintf("error getting user %v", err))
+		return
+	}
+
+	match, err := auth.CheckPasswordHash(req.Password, u.HashedPassword.String)
+
+	if err != nil {
+		respondWithError(w, 500, err.Error())
+		return
+	}
+
+	if !match{
+		respondWithError(w,401,"401 Unauthorized")
+		return
+	}
+
+	resp := UserResponse{
+		ID:        u.ID,
+		CreatedAt: u.CreatedAt.Time,
+		UpdatedAt: u.UpdatedAt.Time,
+		Email:     u.Email,
+	}
+
+	respondWithJSON(w,200,resp)
+
 }
