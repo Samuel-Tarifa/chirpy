@@ -14,9 +14,11 @@ import (
 func main() {
 	godotenv.Load()
 	dbURL := os.Getenv("DB_URL")
+	tokenSecret := os.Getenv("JWT_SECRET")
 
 	apiCfg := apiConfig{}
 	apiCfg.platform = os.Getenv("PLATFORM")
+	apiCfg.tokenSecret=tokenSecret
 
 	db, err := sql.Open("postgres", dbURL)
 

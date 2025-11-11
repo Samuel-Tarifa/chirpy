@@ -12,11 +12,11 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
 	platform       string
+	tokenSecret    string
 }
 
 type chirp struct {
 	Body    string    `json:"body"`
-	User_id uuid.UUID `json:"user_id"`
 }
 
 type responseError struct {
@@ -30,6 +30,14 @@ type UserResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	Email     string    `json:"email"`
+}
+
+type UserResponseWithToken struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
+	Token     string    `json:"token"`
 }
 
 type Chirp struct {
