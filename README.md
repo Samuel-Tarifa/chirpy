@@ -57,19 +57,10 @@ O manualmente:
 goose -dir sql/schema postgres "$DB_URL" up
 ```
 
-### 5. Instalar y compilar el frontend (opcional)
+### 5. Ejecutar el servidor
 
 ```sh
-cd frontend
-npm install
-npm run build
-cd ..
-```
-
-### 6. Ejecutar el servidor
-
-```sh
-go run main.go middleware.go handlers.go fileserver.go types.go
+go run .
 ```
 
 El servidor estará disponible en `http://localhost:8080`.
