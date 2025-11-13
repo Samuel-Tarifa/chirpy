@@ -135,10 +135,10 @@ func (cfg *apiConfig) createUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := UserResponse{
-		ID:        u.ID,
-		CreatedAt: u.CreatedAt.Time,
-		UpdatedAt: u.UpdatedAt.Time,
-		Email:     u.Email,
+		ID:          u.ID,
+		CreatedAt:   u.CreatedAt.Time,
+		UpdatedAt:   u.UpdatedAt.Time,
+		Email:       u.Email,
 		IsChirpyRed: u.IsChirpyRed.Bool,
 	}
 
@@ -147,7 +147,24 @@ func (cfg *apiConfig) createUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *apiConfig) getChirps(w http.ResponseWriter, r *http.Request) {
-	chirps, err := cfg.db.GetChirps(r.Context())
+
+	author_id := r.URL.Query().Get("author_id")
+
+	param:=uuid.Nil
+
+	if author_id != "" {
+
+		uuid, err := uuid.Parse(author_id)
+
+		if err != nil {
+			respondWithError(w, 400, err.Error())
+			return
+		}
+
+		param=uuid
+	}
+
+	chirps, err := cfg.db.GetChirps(r.Context(), param)
 
 	if err != nil {
 		respondWithError(w, 500, fmt.Sprintf("error getting chirps:\n%v", err))
@@ -270,7 +287,7 @@ func (cfg *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
 		Email:        u.Email,
 		Token:        token,
 		RefreshToken: createdRefreshToken.Token,
-		IsChirpyRed: u.IsChirpyRed.Bool,
+		IsChirpyRed:  u.IsChirpyRed.Bool,
 	}
 
 	respondWithJSON(w, 200, resp)
@@ -398,10 +415,10 @@ func (cfg *apiConfig) updateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := UserResponse{
-		ID:        u.ID,
-		CreatedAt: u.CreatedAt.Time,
-		UpdatedAt: u.UpdatedAt.Time,
-		Email:     u.Email,
+		ID:          u.ID,
+		CreatedAt:   u.CreatedAt.Time,
+		UpdatedAt:   u.UpdatedAt.Time,
+		Email:       u.Email,
 		IsChirpyRed: u.IsChirpyRed.Bool,
 	}
 
@@ -411,6 +428,10 @@ func (cfg *apiConfig) updateUser(w http.ResponseWriter, r *http.Request) {
 func (cfg *apiConfig) deleteChirp(w http.ResponseWriter, r *http.Request) {
 
 	bearer, err := auth.GetBearerToken(r.Header)
+
+	if err != nil {
+		respondWithError(w, 500, err.Error())
+	}
 
 	userIDFromToken, err := auth.ValidateJWT(bearer, cfg.tokenSecret)
 
@@ -453,6 +474,19 @@ func (cfg *apiConfig) deleteChirp(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cfg *apiConfig) upgradeUser(w http.ResponseWriter, r *http.Request) {
+
+	apiKey, err := auth.GetAPIKey(r.Header)
+
+	if err != nil {
+		respondWithError(w, 401, err.Error())
+		return
+	}
+
+	if apiKey != cfg.polkaKey {
+		respondWithError(w, 401, "unauthorized")
+		return
+	}
+
 	decoder := json.NewDecoder(r.Body)
 	defer r.Body.Close()
 
@@ -466,8 +500,8 @@ func (cfg *apiConfig) upgradeUser(w http.ResponseWriter, r *http.Request) {
 
 	data := req{}
 
-	if err:=decoder.Decode(&data);err!=nil{
-		respondWithError(w,500,err.Error())
+	if err := decoder.Decode(&data); err != nil {
+		respondWithError(w, 500, err.Error())
 	}
 
 	if data.Event != "user.upgraded" {
@@ -475,30 +509,30 @@ func (cfg *apiConfig) upgradeUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	uuid,err:=uuid.Parse(data.Data.UserID)
+	uuid, err := uuid.Parse(data.Data.UserID)
 
-	if err!=nil{
-		respondWithError(w,400,fmt.Sprintf("invalid uuid: %s",err))
+	if err != nil {
+		respondWithError(w, 400, fmt.Sprintf("invalid uuid: %s", err))
 		return
 	}
 
-	params:=database.SetChirpyRedUserParams{
+	params := database.SetChirpyRedUserParams{
 		ID: uuid,
 		IsChirpyRed: sql.NullBool{
-			Bool: true,
+			Bool:  true,
 			Valid: true,
 		},
 	}
 
-	_,err=cfg.db.SetChirpyRedUser(r.Context(),params)
+	_, err = cfg.db.SetChirpyRedUser(r.Context(), params)
 
-	if err!=nil{
-		if errors.Is(err,sql.ErrNoRows){
-			respondWithError(w,404,"user not found")
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			respondWithError(w, 404, "user not found")
 			return
 		}
-		respondWithError(w,500,err.Error())
+		respondWithError(w, 500, err.Error())
 	}
 
-	respondWithJSON(w,204,nil)
+	respondWithJSON(w, 204, nil)
 }

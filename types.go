@@ -13,6 +13,7 @@ type apiConfig struct {
 	db             *database.Queries
 	platform       string
 	tokenSecret    string
+	polkaKey       string
 }
 
 type chirp struct {

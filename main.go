@@ -18,7 +18,8 @@ func main() {
 
 	apiCfg := apiConfig{}
 	apiCfg.platform = os.Getenv("PLATFORM")
-	apiCfg.tokenSecret=tokenSecret
+	apiCfg.polkaKey = os.Getenv("POLKA_KEY")
+	apiCfg.tokenSecret = tokenSecret
 
 	db, err := sql.Open("postgres", dbURL)
 
@@ -47,9 +48,9 @@ func main() {
 
 	mux.HandleFunc("POST /api/users", apiCfg.createUser)
 
-	mux.HandleFunc("PUT /api/users",apiCfg.updateUser)
-	
-	mux.HandleFunc("POST /api/login",apiCfg.loginUser)
+	mux.HandleFunc("PUT /api/users", apiCfg.updateUser)
+
+	mux.HandleFunc("POST /api/login", apiCfg.loginUser)
 
 	mux.HandleFunc("POST /api/chirps", apiCfg.createChirp)
 
@@ -57,14 +58,13 @@ func main() {
 
 	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.deleteChirp)
 
-	mux.HandleFunc("GET /api/chirps/{chirpID}",apiCfg.getChirp)
+	mux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.getChirp)
 
-	mux.HandleFunc("POST /api/refresh",apiCfg.refreshAccessToken)
+	mux.HandleFunc("POST /api/refresh", apiCfg.refreshAccessToken)
 
-	mux.HandleFunc("POST /api/revoke",apiCfg.revokeRefreshToken)
+	mux.HandleFunc("POST /api/revoke", apiCfg.revokeRefreshToken)
 
-	mux.HandleFunc("POST /api/polka/webhooks",apiCfg.upgradeUser)
-
+	mux.HandleFunc("POST /api/polka/webhooks", apiCfg.upgradeUser)
 
 	server := http.Server{
 		Handler: mux,
